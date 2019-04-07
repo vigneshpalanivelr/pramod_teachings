@@ -1,0 +1,23 @@
+pipeline{
+    agent any
+    stages{
+        stage('clone the source code'){
+            steps{
+               git branch: 'osit_test',
+               credentialsId: 'pramod_github',
+               url: 'https://github.com/pramodkumarpanda/osit_devops.git'
+               
+            }
+        }
+        stage('Sonar analysis'){
+            steps{
+                script {
+                    sh """
+                   sudo cp -f settings.xml /usr/share/maven/conf/
+                   cd catlog&&mvn sonar:sonar
+                   """
+            }
+            }
+        }
+  }
+}
