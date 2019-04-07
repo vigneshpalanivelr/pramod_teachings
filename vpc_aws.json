@@ -1,0 +1,127 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "VPC Automation",
+    "Parameters":{
+      "VCidr": {
+          "Description": "Plz Enter a CIDR",
+          "Type": "String"
+      },
+      "VNname": {
+          "Description": "Network Name",
+          "Type": "String",
+          "Default": "pythonnetwork"
+      },
+      "Vzone1": {
+          "Description": "-",
+          "Type": "AWS::EC2::AvailabilityZone::Name",
+          "Default": ""
+      },
+      "Vzone2": {
+          "Description": "-",
+          "Type": "AWS::EC2::AvailabilityZone::Name",
+          "Default": ""
+      }
+    },
+    "Resources": {
+        "mynetwork": {
+          "Type": "AWS::EC2::VPC",
+          "Properties": {
+            "CidrBlock": { "Ref": "VCidr" },
+            "Tags": [{ "Key": "Name", "Value":  { "Ref": "VNname" } }]
+          }
+        },
+        "pubnet": {
+          "Type": "AWS::EC2::Subnet",
+          "Properties": {
+            "AvailabilityZone": { "Ref": "Vzone1" },
+            "VpcId": { "Ref": "mynetwork" },
+            "CidrBlock": "10.0.0.0/28",
+            "Tags": [{ "Key": "Name", "Value":  "publicnet" }]
+          }
+        },
+        "prinet": {
+          "Type": "AWS::EC2::Subnet",
+          "Properties": {
+            "AvailabilityZone": { "Ref": "Vzone2" },
+            "VpcId": { "Ref": "mynetwork" },
+            "CidrBlock": "10.0.0.16/28",
+            "Tags": [{ "Key": "Name", "Value":  "privatenet" }]
+          }
+        },
+        "publictable": {
+          "Type": "AWS::EC2::RouteTable",
+          "Properties": {
+            "VpcId": { "Ref": "mynetwork" },
+            "Tags": [{ "Key": "Name", "Value":  "publictable" }]
+          }
+        },
+
+        "privatetable": {
+          "Type": "AWS::EC2::RouteTable",
+          "Properties": {
+            "VpcId": { "Ref": "mynetwork" },
+            "Tags": [{ "Key": "Name", "Value":  "privatetable" }]
+          }
+        },
+        "ipath": {
+          "Type": "AWS::EC2::InternetGateway",
+          "Properties": {
+            "Tags": [{ "Key": "Name", "Value":  "ipath" }]
+          }
+        },
+        "AttachGateway": {
+          "Type": "AWS::EC2::VPCGatewayAttachment",
+          "Properties": {
+            "VpcId": { "Ref": "mynetwork" },
+            "InternetGatewayId": { "Ref": "ipath" }
+          }
+        },
+        "publicpath": {
+          "Type": "AWS::EC2::Route",
+          "Properties": {
+            "RouteTableId": { "Ref": "publictable" },
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "GatewayId": { "Ref": "ipath" }
+          }
+        },
+        "publicasso": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": { "Ref": "pubnet" },
+            "RouteTableId": { "Ref": "publictable" }
+          }
+        },
+        "staticip": {
+          "Type": "AWS::EC2::EIP",
+          "Properties": {
+            "Domain": "vpc"
+          }
+        },
+        "NatGateway":
+            {
+              "Type" : "AWS::EC2::NatGateway",
+              "Properties" : {
+                "AllocationId" : { "Fn::GetAtt" : [ "staticip", "AllocationId" ]},
+                "SubnetId" : { "Ref": "pubnet" },
+                "Tags" : [{ "Key": "Name", "Value":  "mynat" }]
+          }
+        },
+
+        "privatepath": {
+          "Type": "AWS::EC2::Route",
+          "Properties": {
+            "RouteTableId": { "Ref": "privatetable" },
+            "DestinationCidrBlock": "0.0.0.0/0",
+            "GatewayId": { "Ref": "NatGateway" }
+          }
+        },
+        "privateasso": {
+          "Type": "AWS::EC2::SubnetRouteTableAssociation",
+          "Properties": {
+            "SubnetId": { "Ref": "prinet" },
+            "RouteTableId": { "Ref": "privatetable" }
+          }
+        }
+
+    }
+}
